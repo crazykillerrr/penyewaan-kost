@@ -28,9 +28,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $full_name = $_POST['full_name'];
     $email = $_POST['email'];
     $phone = $_POST['phone'];
-    $current_password = $_POST['current_password'];
-    $new_password = $_POST['new_password'];
-    $confirm_password = $_POST['confirm_password'];
     
     // Handle profile image upload
     $profile_image = $user['profile_image'];
@@ -74,21 +71,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             // Update basic info
             $stmt = $pdo->prepare("UPDATE users SET full_name = ?, email = ?, phone = ?, profile_image = ? WHERE id = ?");
             $stmt->execute([$full_name, $email, $phone, $profile_image, $_SESSION['user_id']]);
-            
-            // Update password if provided
-            if ($new_password) {
-                if ($new_password !== $confirm_password) {
-                    $error = 'Password baru dan konfirmasi tidak sama!';
-                } elseif (strlen($new_password) < 6) {
-                    $error = 'Password baru minimal 6 karakter!';
-                } elseif (!password_verify($current_password, $user['password'])) {
-                    $error = 'Password saat ini salah!';
-                } else {
-                    $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-                    $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
-                    $stmt->execute([$hashed_password, $_SESSION['user_id']]);
-                }
-            }
             
             if (!$error) {
                 $success = 'Profil berhasil diupdate!';
@@ -279,27 +261,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 </div>
 
                 <!-- Profile Photo Section -->
-                <div class="form-section">
-                    <h4 class="section-title">
-                        <i class="fas fa-camera"></i>
-                        Foto Profil
-                    </h4>
-                    
-                    <div class="upload-area" onclick="document.getElementById('profile_image').click()">
-                        <i class="fas fa-cloud-upload-alt text-success" style="font-size: 2rem; margin-bottom: 1rem;"></i>
-                        <h6>Klik untuk upload foto profil</h6>
-                        <p class="text-muted mb-0">Format: JPG, PNG, GIF (Maksimal 2MB)</p>
-                        <input type="file" class="d-none" id="profile_image" name="profile_image" accept="image/*">
-                    </div>
-                    
-                    <div class="info-card mt-3">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Tips:</strong> Gunakan foto dengan pencahayaan yang baik dan wajah terlihat jelas untuk hasil terbaik.
-                    </div>
-                </div>
-
                 
-
                 <!-- Submit Button -->
                 <div class="text-center">
                     <button type="submit" class="btn-eco me-3">
@@ -342,116 +304,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         </div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // File upload preview
-        document.getElementById('profile_image').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const uploadArea = document.querySelector('.upload-area');
-                uploadArea.innerHTML = `
-                    <i class="fas fa-check-circle text-success" style="font-size: 2rem; margin-bottom: 1rem;"></i>
-                    <h6>File dipilih: ${file.name}</h6>
-                    <p class="text-muted mb-0">Klik submit untuk menyimpan</p>
-                `;
-            }
-        });
-
-        // Drag and drop functionality
-        const uploadArea = document.querySelector('.upload-area');
-        
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            uploadArea.addEventListener(eventName, preventDefaults, false);
-        });
-
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-            uploadArea.addEventListener(eventName, highlight, false);
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            uploadArea.addEventListener(eventName, unhighlight, false);
-        });
-
-        function highlight(e) {
-            uploadArea.classList.add('dragover');
-        }
-
-        function unhighlight(e) {
-            uploadArea.classList.remove('dragover');
-        }
-
-        uploadArea.addEventListener('drop', handleDrop, false);
-
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            document.getElementById('profile_image').files = files;
-            
-            if (files[0]) {
-                uploadArea.innerHTML = `
-                    <i class="fas fa-check-circle text-success" style="font-size: 2rem; margin-bottom: 1rem;"></i>
-                    <h6>File dipilih: ${files[0].name}</h6>
-                    <p class="text-muted mb-0">Klik submit untuk menyimpan</p>
-                `;
-            }
-        }
-
-        // Password strength indicator
-        document.getElementById('new_password').addEventListener('input', function(e) {
-            const password = e.target.value;
-            const strengthBar = document.getElementById('passwordStrength');
-            
-            if (password.length === 0) {
-                strengthBar.style.width = '0%';
-                strengthBar.className = 'password-strength';
-                return;
-            }
-            
-            let strength = 0;
-            if (password.length >= 6) strength += 25;
-            if (password.match(/[a-z]/)) strength += 25;
-            if (password.match(/[A-Z]/)) strength += 25;
-            if (password.match(/[0-9]/)) strength += 25;
-            
-            strengthBar.style.width = strength + '%';
-            
-            if (strength < 50) {
-                strengthBar.className = 'password-strength strength-weak';
-            } else if (strength < 75) {
-                strengthBar.className = 'password-strength strength-medium';
-            } else {
-                strengthBar.className = 'password-strength strength-strong';
-            }
-        });
-
-        // Password confirmation validation
-        document.getElementById('confirm_password').addEventListener('input', function(e) {
-            const newPassword = document.getElementById('new_password').value;
-            const confirmPassword = e.target.value;
-            
-            if (confirmPassword && newPassword !== confirmPassword) {
-                e.target.setCustomValidity('Password tidak sama');
-            } else {
-                e.target.setCustomValidity('');
-            }
-        });
-
-        // Form validation
-        document.getElementById('profileForm').addEventListener('submit', function(e) {
-            const newPassword = document.getElementById('new_password').value;
-            const currentPassword = document.getElementById('current_password').value;
-            
-            if (newPassword && !currentPassword) {
-                e.preventDefault();
-                alert('Masukkan password saat ini untuk mengubah password');
-                document.getElementById('current_password').focus();
-            }
-        });
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>   
 </body>
 </html>
